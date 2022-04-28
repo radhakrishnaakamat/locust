@@ -26,6 +26,7 @@ from .util.timespan import parse_timespan
 from .html import get_html_report
 from flask_cors import CORS
 from json import dumps
+from .util.kubernetes import update_kubernetes_config_and_restart
 
 
 logger = logging.getLogger(__name__)
@@ -174,6 +175,26 @@ class WebUI:
                 self._swarm_greenlet = None
             environment.runner.stop()
             return jsonify({"success": True, "message": "Test stopped"})
+
+        @app.route("/update_test_file")
+        @self.auth_required_if_enabled
+        def update_test_file():
+            if self._swarm_greenlet is not None:
+                self._swarm_greenlet.kill(block=True)
+                self._swarm_greenlet = None
+            environment.runner.stop()
+            file_data = request.files["configData"].stream.read()
+
+            files = request.files.getlist("file")
+            other_files = []
+            for file in files:
+                if file.filename != "configData":
+                    other_files.append({{"file_name": file.filename, "content": file.stream.read().decode("utf-8")}})
+            config_data = file_data.decode("utf-8")
+            if bool(config_data and not config_data.isspace()) is True:
+                return update_kubernetes_config_and_restart(config_data, other_files)
+            else:
+                return jsonify({"success": False, "message": "Update failed, invalid test file"})
 
         @app.route("/stats/reset")
         @self.auth_required_if_enabled

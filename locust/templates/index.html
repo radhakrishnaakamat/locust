@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Locust for {{ locustfile }}</title>
     <link rel="stylesheet" type="text/css" href="./static/css/application.css?v={{ version }}" media="screen">
-    <link rel="shortcut icon" href="./static/img/favicon.ico" type="image/x-icon"/>
+    <link rel="shortcut icon" href="./static/img/favicon.ico" type="image/x-icon" />
     {% block extended_head %}
     {% endblock extended_head %}
 </head>
+
 <body class="{{state}}">
     <div class="top">
         <div class="top-content container">
@@ -30,10 +32,10 @@
                     <a href="#" class="edit-test" id="edit-test">Edit</a>
                 </div>
                 {% if is_distributed %}
-                    <div class="top_box box_workers" id="box_workers">
-                        <div class="label">WORKERS</div>
-                        <div class="value" id="workerCount">{{worker_count}}</div>
-                    </div>
+                <div class="top_box box_workers" id="box_workers">
+                    <div class="label">WORKERS</div>
+                    <div class="value" id="workerCount">{{worker_count}}</div>
+                </div>
                 {% endif %}
                 <div class="top_box box_rps box_running" id="box_rps">
                     <div class="label">RPS</div>
@@ -47,11 +49,16 @@
                     <a href="./stop" class="stop-button"><i></i>STOP</a>
                     <a href="./stats/reset" class="reset-button">Reset<br>Stats</a>
                 </div>
+                {% if is_distributed %}
+                <div class="top_box {{kubernetes_enabled}}" id="box_update_test">
+                    <a href="#" class="update-test-file"><i></i>Update<br>Test File</a>
+                </div>
+                {% endif %}
             </div>
             <div style="clear:both;"></div>
         </div>
     </div>
-    
+
     <div class="dialogs">
         <div class="dialog start" id="start">
             <div style="position:relative;">
@@ -61,41 +68,52 @@
                 <h2>Start new load test</h2>
                 <form action="./swarm" method="POST" id="swarm_form">
                     {% if is_shape %}
-                        <label for="user_count">Number of users <span style="color:#8a8a8a;">(peak concurrency)</span></label>
-                        <input type="text" name="user_count" id="user_count" class="val_disabled" value="-" disabled="disabled" title="Disabled for tests using LoadTestShape class"/><br>
-                        <input type="hidden" name="user_count" id="user_count" value="0"/><br>
-                        <label for="spawn_rate">Spawn rate <span style="color:#8a8a8a;">(users started/second)</span></label>
-                        <input type="text" name="spawn_rate" id="spawn_rate" class="val_disabled" value="-" disabled="disabled" title="Disabled for tests using LoadTestShape class"/><br>
-                        <input type="hidden" name="spawn_rate" id="spawn_rate" value="0"/><br>
+                    <label for="user_count">Number of users <span style="color:#8a8a8a;">(peak
+                            concurrency)</span></label>
+                    <input type="text" name="user_count" id="user_count" class="val_disabled" value="-"
+                        disabled="disabled" title="Disabled for tests using LoadTestShape class" /><br>
+                    <input type="hidden" name="user_count" id="user_count" value="0" /><br>
+                    <label for="spawn_rate">Spawn rate <span style="color:#8a8a8a;">(users
+                            started/second)</span></label>
+                    <input type="text" name="spawn_rate" id="spawn_rate" class="val_disabled" value="-"
+                        disabled="disabled" title="Disabled for tests using LoadTestShape class" /><br>
+                    <input type="hidden" name="spawn_rate" id="spawn_rate" value="0" /><br>
                     {% else %}
-                        <label for="user_count">Number of users <span style="color:#8a8a8a;">(peak concurrency)</span></label>
-                        <input type="text" name="user_count" id="user_count" class="val" value="{{ num_users or "1" }}" onfocus="this.select()"/><br>
-                        <label for="spawn_rate">Spawn rate <span style="color:#8a8a8a;">(users started/second)</span></label>
-                        <input type="text" name="spawn_rate" id="spawn_rate" class="val" value="{{ spawn_rate or "1" }}" onfocus="this.select()"/><br>
+                    <label for="user_count">Number of users <span style="color:#8a8a8a;">(peak
+                            concurrency)</span></label>
+                    <input type="text" name="user_count" id="user_count" class="val" value="{{ num_users or " 1" }}"
+                        onfocus="this.select()" /><br>
+                    <label for="spawn_rate">Spawn rate <span style="color:#8a8a8a;">(users
+                            started/second)</span></label>
+                    <input type="text" name="spawn_rate" id="spawn_rate" class="val" value="{{ spawn_rate or " 1" }}"
+                        onfocus="this.select()" /><br>
                     {% endif %}
                     <label for="host">
                         Host <span style="color:#8a8a8a;">(e.g. http://www.example.com)</span>
                         {% if override_host_warning %}
-                            <span style="color:#8a8a8a; font-size:12px;">(setting this will override the host on all User classes)</span></label>
-                        {% endif %}
+                        <span style="color:#8a8a8a; font-size:12px;">(setting this will override the host on all User
+                            classes)</span></label>
+                    {% endif %}
                     </label>
-                    <input type="text" name="host" id="host" class="val" autocapitalize="off" autocorrect="off" value="{{ host  or "" }}" onfocus="this.select()"/><br>
+                    <input type="text" name="host" id="host" class="val" autocapitalize="off" autocorrect="off"
+                        value="{{ host  or "" }}" onfocus="this.select()" /><br>
                     {% if extra_options %}<label>Custom parameters:</label>{% endif %}
                     {% for key, value in extra_options.items() %}
-                        {% if not ((value is none) or (value is boolean)) %}
-                            <label for="{{key}}">{{key}}</label>
-                            <input type="text" name="{{key}}" id="{{key}}" class="val" value="{{value}}" /><br>
-                        {% endif %}
+                    {% if not ((value is none) or (value is boolean)) %}
+                    <label for="{{key}}">{{key}}</label>
+                    <input type="text" name="{{key}}" id="{{key}}" class="val" value="{{value}}" /><br>
+                    {% endif %}
                     {% endfor %}
                     {% set glob={'header_printed': False} %}
                     {% for key, value in extra_options.items() %}
-                        {% if (value is none) or (value is boolean) %}
-                            {% if not glob.header_printed %}
-                                The following custom parameters can't be set in the Web UI, because it is a boolean or None type:<br>
-                                {% set _ = glob.update({'header_printed':True}) %}
-                            {% endif %}
-                            {{key}}<br>
-                        {% endif %}
+                    {% if (value is none) or (value is boolean) %}
+                    {% if not glob.header_printed %}
+                    The following custom parameters can't be set in the Web UI, because it is a boolean or None
+                    type:<br>
+                    {% set _ = glob.update({'header_printed':True}) %}
+                    {% endif %}
+                    {{key}}<br>
+                    {% endif %}
                     {% endfor %}
                     <button type="submit">Start swarming</button>
                 </form>
@@ -111,27 +129,55 @@
                 <h2>Edit running load test</h2>
                 <form action="./swarm" method="POST" id="edit_form">
                     {% if is_shape %}
-                        <label for="new_user_count">Number of users (peak concurrency)</label>
-                        <input type="text" name="user_count" id="new_user_count" class="val_disabled"  value="-" disabled="disabled" title="Disabled for tests using LoadTestShape class"/><br>
-                        <label for="spawn_rate">Spawn rate <span style="color:#8a8a8a;">(users added/stopped per second)</span></label>
-                        <input type="text" name="spawn_rate" id="new_spawn_rate" class="val_disabled"  value="-" disabled="disabled" title="Disabled for tests using LoadTestShape class"/><br>
+                    <label for="new_user_count">Number of users (peak concurrency)</label>
+                    <input type="text" name="user_count" id="new_user_count" class="val_disabled" value="-"
+                        disabled="disabled" title="Disabled for tests using LoadTestShape class" /><br>
+                    <label for="spawn_rate">Spawn rate <span style="color:#8a8a8a;">(users added/stopped per
+                            second)</span></label>
+                    <input type="text" name="spawn_rate" id="new_spawn_rate" class="val_disabled" value="-"
+                        disabled="disabled" title="Disabled for tests using LoadTestShape class" /><br>
                     {% else %}
-                        <label for="new_user_count">Number of users (peak concurrency)</label>
-                        <input type="text" name="user_count" id="new_user_count" class="val"  value="{{ num_users or "1" }}" onfocus="this.select()"/><br>
-                        <label for="spawn_rate">Spawn rate <span style="color:#8a8a8a;">(users added/stopped per second)</span></label>
-                        <input type="text" name="spawn_rate" id="new_spawn_rate" class="val"  value="{{ spawn_rate or "1" }}" onfocus="this.select()"/><br>
+                    <label for="new_user_count">Number of users (peak concurrency)</label>
+                    <input type="text" name="user_count" id="new_user_count" class="val" value="{{ num_users or " 1" }}"
+                        onfocus="this.select()" /><br>
+                    <label for="spawn_rate">Spawn rate <span style="color:#8a8a8a;">(users added/stopped per
+                            second)</span></label>
+                    <input type="text" name="spawn_rate" id="new_spawn_rate" class="val" value="{{ spawn_rate or " 1"
+                        }}" onfocus="this.select()" /><br>
                     {% endif %}
                     {% if is_shape %}
-                        <button type="submit" disabled>Start swarming</button>
+                    <button type="submit" disabled>Start swarming</button>
                     {% else %}
-                        <button type="submit">Start swarming</button>
+                    <button type="submit">Start swarming</button>
                     {% endif %}
                 </form>
                 <div style="clear:right;"></div>
             </div>
         </div>
     </div>
-    
+
+
+    <div class="dialog update_test {{kubernetes_enabled}}" id="update_test">
+        <div style="position:relative;">
+            <a href="#" class="close_link">Close</a>
+        </div>
+
+        <div class="padder">
+            <h2>Change test config</h2><br>
+            <form action="./update_k8_config_and_restart" enctype="multipart/form-data" method="POST"
+                id="update_k8_config_and_restart_form">
+                <label for="config_data">locust file </label>
+                <input type="file" id="config_data" name="config_data" /><br>
+                <label for="other_files">other files </label>
+                <input type="file" id="other_files" name="other_files" multiple /><br>
+                <button type="submit">updateConfig</button>
+                <br>
+            </form>
+            <div style="clear:right;"></div>
+        </div>
+    </div>
+    </div>
+
     <div class="main" id="main">
         <nav class="menu">
             <ul class="tabs container">
@@ -142,7 +188,7 @@
                 <li><a href="#">Current ratio</a></li>
                 <li><a href="#">Download Data</a></li>
                 {% if is_distributed %}
-                    <li><a href="#">Workers</a></li>
+                <li><a href="#">Workers</a></li>
                 {% endif %}
                 {% block extended_tabs %}{% endblock extended_tabs %}
             </ul>
@@ -154,19 +200,30 @@
                         <tr>
                             <th class="stats_label" href="#" data-sortkey="method">Type</th>
                             <th class="stats_label" href="#" data-sortkey="name">Name</th>
-                            <th class="stats_label numeric nowrap" href="#" data-sortkey="num_requests" title="Number of successful requests"># Requests</th>
-                            <th class="stats_label numeric nowrap" href="#" data-sortkey="num_failures" title="Number of failures"># Fails</th>
-                            <th class="stats_label numeric" href="#" data-sortkey="median_response_time" title="Median response time">Median (ms)</th>
-                            <th class="stats_label numeric" href="#" data-sortkey="ninetieth_response_time" title="Ninetieth percentile response time, because the response time greater than 100ms is rounded, you may see it greater than the max response time">90%ile (ms)</th>
+                            <th class="stats_label numeric nowrap" href="#" data-sortkey="num_requests"
+                                title="Number of successful requests"># Requests</th>
+                            <th class="stats_label numeric nowrap" href="#" data-sortkey="num_failures"
+                                title="Number of failures"># Fails</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="median_response_time"
+                                title="Median response time">Median (ms)</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="ninetieth_response_time"
+                                title="Ninetieth percentile response time, because the response time greater than 100ms is rounded, you may see it greater than the max response time">
+                                90%ile (ms)</th>
                             <th class="stats_label numeric" href="#" data-sortkey="ninety_ninth_response_time"
                                 title="Ninety-ninth percentile response time, because the response time greater than 100ms is rounded, you may see it greater than the max response time">
                                 99%ile (ms)</th>
-                            <th class="stats_label numeric" href="#" data-sortkey="avg_response_time" title="Average response time">Average (ms)</th>
-                            <th class="stats_label numeric" href="#" data-sortkey="min_response_time" title="Min response time">Min (ms)</th>
-                            <th class="stats_label numeric" href="#" data-sortkey="max_response_time" title="Max response time">Max (ms)</th>
-                            <th class="stats_label numeric" href="#" data-sortkey="avg_content_length" title="Average response size">Average size (bytes)</th>
-                            <th class="stats_label numeric" href="#" data-sortkey="current_rps" title="Current number of requests per second">Current RPS</th>
-                            <th class="stats_label numeric" href="#" data-sortkey="current_fail_per_sec" title="Current number of failures per second">Current Failures/s</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="avg_response_time"
+                                title="Average response time">Average (ms)</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="min_response_time"
+                                title="Min response time">Min (ms)</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="max_response_time"
+                                title="Max response time">Max (ms)</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="avg_content_length"
+                                title="Average response size">Average size (bytes)</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="current_rps"
+                                title="Current number of requests per second">Current RPS</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="current_fail_per_sec"
+                                title="Current number of failures per second">Current Failures/s</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -206,7 +263,7 @@
                 <div style="margin-top:20px;">
                     <a href="./stats/requests/csv">Download request statistics CSV</a><br>
                     {% if stats_history_enabled %}
-                        <a href="./stats/requests_full_history/csv">Download full request statistics history CSV</a><br>
+                    <a href="./stats/requests_full_history/csv">Download full request statistics history CSV</a><br>
                     {% endif %}
                     <a href="./stats/failures/csv">Download failures CSV</a><br>
                     <a href="./exceptions/csv">Download exceptions CSV</a><br>
@@ -214,21 +271,24 @@
                 </div>
             </div>
             {% if is_distributed %}
-                <div style="display:none;">
-                    <table class="stats" id="workers">
-                        <thead>
-                            <tr>
-                                <th class="stats_label" href="#" data-sortkey="id">Worker</th>
-                                <th class="stats_label" href="#" data-sortkey="state">State</th>
-                                <th class="stats_label numeric" href="#" data-sortkey="user_count" title="Number of users on this worker"># users</th>
-                                <th class="stats_label numeric" href="#" data-sortkey="cpu_usage" title="CPU usage of process">CPU usage</th>
-                                <th class="stats_label numeric" href="#" data-sortkey="memory_usage" title="Memory usage of process">Memory usage</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
-                </div>
+            <div style="display:none;">
+                <table class="stats" id="workers">
+                    <thead>
+                        <tr>
+                            <th class="stats_label" href="#" data-sortkey="id">Worker</th>
+                            <th class="stats_label" href="#" data-sortkey="state">State</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="user_count"
+                                title="Number of users on this worker"># users</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="cpu_usage"
+                                title="CPU usage of process">CPU usage</th>
+                            <th class="stats_label numeric" href="#" data-sortkey="memory_usage"
+                                title="Memory usage of process">Memory usage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
             {% endif %}
             {% block extended_panes %}{% endblock extended_panes %}
         </div>
@@ -250,10 +310,13 @@
                 </p>
 
                 <h1>Authors and Copyright</h1>
-                <a href="http://cgbystrom.com/">Carl Byström</a> (<a href="https://twitter.com/cgbystrom/">@cgbystrom</a>)<br>
-                <a href="http://heyman.info/">Jonatan Heyman</a> (<a href="https://twitter.com/jonatanheyman/">@jonatanheyman</a>)<br>
+                <a href="http://cgbystrom.com/">Carl Byström</a> (<a
+                    href="https://twitter.com/cgbystrom/">@cgbystrom</a>)<br>
+                <a href="http://heyman.info/">Jonatan Heyman</a> (<a
+                    href="https://twitter.com/jonatanheyman/">@jonatanheyman</a>)<br>
                 Joakim Hamrén (<a href="https://twitter.com/Jahaaja/">@jahaaja</a>)<br>
-                <a href="http://esn.me/">ESN Social Software</a> (<a href="https://twitter.com/uprise_ea/">@uprise_ea</a>)<br>
+                <a href="http://esn.me/">ESN Social Software</a> (<a
+                    href="https://twitter.com/uprise_ea/">@uprise_ea</a>)<br>
                 Hugo Heyman (<a href="https://twitter.com/hugoheyman/">@hugoheyman</a>)
 
 
@@ -347,4 +410,5 @@
     {% block extended_script %}
     {% endblock extended_script %}
 </body>
+
 </html>
