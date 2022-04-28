@@ -1,0 +1,384 @@
+---
+# Source: locust/templates/master-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: licious-locust-master
+  labels:
+    helm.sh/chart: locust-0.23.0
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: locust/templates/worker-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: licious-locust-worker
+  labels:
+    helm.sh/chart: locust-0.23.0
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: locust/templates/configmap-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: licious-locust-config
+  labels:
+    helm.sh/chart: locust-0.23.0
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  docker-entrypoint.sh: |
+    #!/bin/sh
+
+    set -eu
+
+    exec /opt/venv/bin/locust $@
+---
+# Source: locust/templates/configmap-locust-lib.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: licious-locust-lib
+  labels:
+    helm.sh/chart: locust-0.23.0
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  __init__.py: |
+    # -*- coding: utf-8 -*-
+  example_functions.py: |
+    # -*- coding: utf-8 -*-
+  
+    import random
+  
+  
+    def choose_random_page():
+        pages = [
+            '/policies/privacy/',
+            '/contact/',
+            '/about/',
+            '/search/howsearchworks/crawling-indexing/',
+            '/search/howsearchworks/algorithms/'
+        ]
+  
+        return random.choice(pages)
+---
+# Source: locust/templates/configmap-locust-locustfile.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: licious-locust-locustfile
+  labels:
+    helm.sh/chart: locust-0.23.0
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  main.py: |
+    # -*- coding: utf-8 -*-
+  
+    from locust import HttpUser, task, between
+    from lib.example_functions import choose_random_page
+  
+  
+    default_headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36'}
+  
+  
+    class WebsiteUser(HttpUser):
+        wait_time = between(1, 2)
+  
+        @task(1)
+        def get_index(self):
+            self.client.get("/", headers=default_headers)
+  
+        @task(3)
+        def get_random_page(self):
+            self.client.get(choose_random_page(), headers=default_headers)
+---
+# Source: locust/templates/master-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: licious-locust
+  labels:
+    helm.sh/chart: locust-0.23.0
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/managed-by: Helm
+    component: "master"
+spec:
+  type: ClusterIP
+  ports:
+  - name: master-p1
+    port: 5557
+    protocol: TCP
+    targetPort: 5557
+  - name: master-p2
+    port: 5558
+    protocol: TCP
+    targetPort: 5558
+  - name: master-p3
+    port: 8089
+    protocol: TCP
+    targetPort: 8089
+  selector:
+    component: master
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+---
+# Source: locust/templates/master-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: licious-locust-master
+  labels:
+    component: master
+    helm.sh/chart: locust-0.23.0
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      component: master
+      app.kubernetes.io/name: locust
+      app.kubernetes.io/instance: licious
+      load_test: example
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config-locust-lib: ab20645dad6a51b0f7d712ed2ef6e613ad6863847bfc06333f6c899a5730bfe1
+        checksum/config-locust-locustfile: 216d5f277d04e3d47e68a4ff017f7345f08281de2d40097b4f4b6667666b66d9
+        checksum/config-config: a32eb03fa5767d9c271ff2c4cd8fc33d027e0cde21a3be483d742537a026f100
+        checksum/config-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+      labels:
+        component: master
+        app.kubernetes.io/name: locust
+        app.kubernetes.io/instance: licious
+        load_test: example
+    spec:
+      securityContext:
+        {}
+      serviceAccountName: licious-locust-master
+      containers:
+      - name: locust
+        securityContext:
+            {}
+        image: "liciousrk/locust:latest"
+        command:
+        - sh
+        - /config/docker-entrypoint.sh
+        args:
+          - --master
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 1
+            memory: 1024Mi
+          requests:
+            cpu: 1
+            memory: 1024Mi
+        volumeMounts:
+          - name: locustfile
+            mountPath: /mnt/locust
+          - name: lib
+            mountPath: /mnt/locust/lib
+          - name: config
+            mountPath: /config
+        env:
+          - name: LOCUST_HOST
+            value: "https://localhost"
+          - name: LOCUST_LOGLEVEL
+            value: "INFO"
+          - name: LOCUST_LOCUSTFILE
+            value: "/mnt/locust/main.py"
+          - name: KUBERNETES_DEPLOYMENT_NAMESPACE
+            value: "load"
+          - name: KUBERNETES_WORKER_DEPLOYMENT_NAME
+            value: "vault-locust-worker"
+          - name: KUBERNETES_CONFIG_NAME
+            value: "licious-locust-locustfile"
+        ports:
+          - containerPort: 8089
+            name: loc-master-web
+            protocol: TCP
+          - containerPort: 5557
+            name: loc-master-p1
+            protocol: TCP
+          - containerPort: 5558
+            name: loc-master-p2
+            protocol: TCP
+        readinessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 30
+          failureThreshold: 2
+          httpGet:
+            path: /
+            port: 8089
+      restartPolicy: Always
+      volumes:
+        - name: lib
+          configMap:
+            name: licious-locust-lib
+        - name: locustfile
+          configMap:
+            name: licious-locust-locustfile
+        - name: config
+          configMap:
+            name: licious-locust-config
+---
+# Source: locust/templates/worker-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: licious-locust-worker
+  labels:
+    component: worker
+    helm.sh/chart: locust-0.23.0
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      component: worker
+      app.kubernetes.io/name: locust
+      app.kubernetes.io/instance: licious
+      load_test: example
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config-locust-lib: ab20645dad6a51b0f7d712ed2ef6e613ad6863847bfc06333f6c899a5730bfe1
+        checksum/config-locust-locustfile: 216d5f277d04e3d47e68a4ff017f7345f08281de2d40097b4f4b6667666b66d9
+        checksum/config-config: a32eb03fa5767d9c271ff2c4cd8fc33d027e0cde21a3be483d742537a026f100
+        checksum/config-secret: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+      labels:
+        component: worker
+        app.kubernetes.io/name: locust
+        app.kubernetes.io/instance: licious
+        load_test: example
+    spec:
+      securityContext:
+        {}
+      serviceAccountName: licious-locust-worker
+      containers:
+      - name: locust
+        securityContext:
+            {}
+        image: "liciousrk/locust:latest"
+        command:
+        - sh
+        - /config/docker-entrypoint.sh
+        args:
+          - --worker
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 1
+            memory: 512Mi
+          requests:
+            cpu: 1
+            memory: 512Mi
+        volumeMounts:
+          - name: locustfile
+            mountPath: /mnt/locust
+          - name: lib
+            mountPath: /mnt/locust/lib
+          - name: config
+            mountPath: /config
+        env:
+          - name: LOCUST_HOST
+            value: "https://localhost"
+          - name: LOCUST_MASTER_NODE_HOST
+            value: "licious-locust"
+          - name: LOCUST_MASTER_NODE_PORT
+            value: "5557"
+          - name: LOCUST_LOGLEVEL
+            value: "INFO"
+          - name: LOCUST_LOCUSTFILE
+            value: "/mnt/locust/main.py"
+      restartPolicy: Always
+      volumes:
+        - name: lib
+          configMap:
+            name: licious-locust-lib
+        - name: locustfile
+          configMap:
+            name: licious-locust-locustfile
+        - name: config
+          configMap:
+            name: licious-locust-config
+---
+# Source: locust/templates/worker-hpa.yaml
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: licious-locust
+  labels:
+    helm.sh/chart: locust-0.23.0
+    app.kubernetes.io/name: locust
+    app.kubernetes.io/instance: licious
+    load_test: example
+    app.kubernetes.io/version: "2.1.0"
+    app.kubernetes.io/managed-by: Helm
+    component: "worker"
+spec:
+  scaleTargetRef:
+    kind: Deployment
+    apiVersion: apps/v1
+    name: licious-locust-worker
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: locust_master
+rules:
+- apiGroups: ["", "apps",]
+  resources: ["deployments", "configmaps"]
+  verbs: ["get","patch"] 
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: locust_master
+subjects:
+- kind: ServiceAccount
+  name: licious-locust-master
+  namespace: load
+roleRef:
+  kind: ClusterRole
+  name: locust_master
+  apiGroup: rbac.authorization.k8s.io
